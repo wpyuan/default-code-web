@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head runat="server">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="mobile-web-app-capable" content="yes"/>
+    <title>配置维护</title>
+    <link rel="icon" href="../../image/icon.png" type="image/x-icon"/>
+    <link rel="stylesheet" type="text/css" href="../../css/layout.css"/>
+    <link rel="stylesheet" href="../../element-ui/css/element.css">
+</head>
+<body>
+<div id="app" class="container" v-cloak>
+    <el-container>
+        <el-main>
+            <el-form :inline="true" :model="config" class="form-inline" size="mini">
+                <el-form-item label="编码">
+                    <el-input v-model="config.code" placeholder="编码"></el-input>
+                </el-form-item>
+                <el-form-item label="描述">
+                    <el-input v-model="config.description" placeholder="描述"></el-input>
+                </el-form-item>
+                <el-form-item label="是否启用">
+                    <el-switch v-model="config.isEnable"></el-switch>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="onQuery">查询</el-button>
+                </el-form-item>
+            </el-form>
+            <el-row :gutter="20" class="card-row">
+                <el-col :span="6" v-for="(item, index) in configList" :key="item.id">
+                    <el-card :body-style="{ padding: '20px' }" :shadow="handleShadow(item)">
+                        <div slot="header" class="clearfix">
+                            <span>{{item.code}}</span>
+                            <div class="desc">{{item.description}}</div>
+                            <el-switch v-model="item.isEnable" style="float: right;" disabled></el-switch>
+                        </div>
+                        <div v-for="(p, p_index) in item.propertyList" :key="p.id" class="text item" style="word-wrap:break-word">
+                            {{p.description}}
+                        </div>
+
+                        <div class="bottom clearfix">
+                            <el-dropdown style="float: right;" trigger="click">
+                              <span class="el-dropdown-link">
+                                操作<i class="el-icon-arrow-down el-icon--right"></i>
+                              </span>
+                                <el-dropdown-menu slot="dropdown">
+                                    <el-dropdown-item>
+                                        <el-button type="text" icon="el-icon-edit" @click="handleEdit(item, index)">编辑</el-button>
+                                    </el-dropdown-item>
+                                    <el-dropdown-item>
+                                        <el-button type="text" icon="el-icon-delete" @click="handleDel(item, index)">删除</el-button>
+                                    </el-dropdown-item>
+                                </el-dropdown-menu>
+                            </el-dropdown>
+                        </div>
+                    </el-card>
+                </el-col>
+            </el-row>
+            <div class="block">
+                <el-pagination
+                        background
+                        layout="prev, pager, next, sizes, total"
+                        :total="page.total"
+                        :page-size="page.pageSize"
+                        :page-sizes="[8, 10, 20, 50, 100]"
+                        @size-change="handleSizeChange"
+                        @prev-click="handleTurnPage"
+                        @next-click="handleTurnPage"
+                        @current-change="handleTurnPage">
+                </el-pagination>
+            </div>
+        </el-main>
+    </el-container>
+</div>
+<script src="../../element-ui/js/vue.js"></script>
+<script src="../../element-ui/js/element.js"></script>
+<script src="../../js/jquery-3.5.1.min.js"></script>
+<script src="../../js/axios.js"></script>
+<script type="text/javascript" language="javascript">
+
+    var vue = new Vue({
+        el: '#app',
+        data() {
+            return {
+                config: {
+                    id: undefined,
+                    code: undefined,
+                    description: undefined,
+                    isEnable: undefined,
+                },
+                configList: [],
+                page: {
+                    total: undefined,
+                    pageSize: 8,
+                },
+            }
+        },
+        mounted() {
+            this.initData()
+        },
+        methods: {
+            initData() {
+                this.getConfigList(1, this.page.pageSize);
+            },
+            getConfigList(pageNum, pageSize) {
+                let that = this;
+                axios.get(`/config/list/page`, {
+                    params: {
+                        code: that.config.code,
+                        description: that.config.description,
+                        isEnable: that.config.isEnable,
+                        pageNum: pageNum,
+                        pageSize: pageSize,
+                    }
+                })
+                    .then(function (res) {
+                        that.page.total = res.data.total
+                        that.page.pageSize = res.data.pageSize
+                        that.configList = res.data.list
+                        that.configList.forEach((item, index) => {
+                            axios.get(`/property/list?configId=${item.id}`)
+                                .then(function (res) {
+                                    item.propertyList = res.data
+                                    Vue.set(that.configList, index, item);
+                                }).catch(function (error) {
+                                that.$notify.error({
+                                    title: '错误',
+                                    message: '网络错误，请稍后再试',
+                                    position: 'bottom-right'
+                                });
+                            });
+                        })
+                    }).catch(function (error) {
+                    that.$notify.error({
+                        title: '错误',
+                        message: '网络错误，请稍后再试',
+                        position: 'bottom-right'
+                    });
+                });
+            },
+            handleEdit(item, index) {
+                window.location.href = `property_list.html?configId=${item.id}`
+            },
+            handleDel(item, index) {
+                let that = this
+                axios.delete(`/config/remove?id=${item.id}`).then(function (res) {
+                    that.configList.splice(index, 1)
+                }).catch(function (error) {
+                    that.$notify.error({
+                        title: '错误',
+                        message: '网络错误，请稍后再试',
+                        position: 'bottom-right'
+                    })
+                });
+            },
+            handleShadow(item) {
+                return item.isEnable ? 'always' : 'never'
+            },
+            handleSizeChange(val) {
+                this.page.pageSize = val
+                this.getConfigList(1, this.page.pageSize)
+            },
+            handleTurnPage(val) {
+                this.getConfigList(val, this.page.pageSize)
+            },
+            onQuery() {
+                this.getConfigList(1, this.page.pageSize)
+            },
+        }
+    });
+
+</script>
+</body>
+<style>
+    .container, .el-container {
+        height: 100%;
+    }
+
+    .el-main {
+        background-color: #f0f2f5;
+        color: #333;
+    }
+
+    .text {
+        font-size: 14px;
+    }
+
+    .item {
+        margin-bottom: 10px;
+    }
+
+    .clearfix:before,
+    .clearfix:after {
+        display: table;
+        content: "";
+    }
+    .clearfix:after {
+        clear: both
+    }
+
+    span {
+        font-size: 16px;
+    }
+
+    .el-card {
+        margin-bottom: 10px;
+    }
+
+    .desc {
+        margin-top: 5px;
+        color: #999;
+    }
+
+    .el-dropdown-link {
+        cursor: pointer;
+        color: #409EFF;
+    }
+    .el-icon-arrow-down {
+        font-size: 12px;
+    }
+    .demonstration {
+        display: block;
+        color: #8492a6;
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+    .block {
+        text-align: right;
+    }
+
+    .form-inline {
+        background: #FFFFFF;
+        padding: 20px 20px 0px 20px;
+    }
+    .card-row {
+        margin-top: 20px;
+    }
+</style>
+</html>

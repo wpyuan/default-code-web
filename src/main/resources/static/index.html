@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="mobile-web-app-capable" content="yes"/>
+    <title>Default Core System</title>
+    <link rel="icon" href="image/icon.png" type="image/x-icon"/>
+    <link rel="stylesheet" type="text/css" href="css/layout.css"/>
+    <link rel="stylesheet" href="element-ui/css/element.css">
+</head>
+<body>
+<div id="app" class="container" v-cloak>
+    <el-container>
+        <el-header>
+            <el-link href="javascript:(0)" :underline="false" @click.native="handleCollapse">
+                <el-avatar :size="60" src="../image/icon-blue.png" click></el-avatar>
+            </el-link>
+            <b>{{systemTitle}}</b>
+        </el-header>
+        <el-container class="body-container">
+            <el-aside width="200">
+                <el-menu id="menu" class="el-menu-vertical-demo" :collapse="isCollapse">
+                </el-menu>
+            </el-aside>
+            <el-container>
+                <el-main>
+                    <el-tabs v-model="currentTableId" type="card" @tab-remove="removeTab">
+                        <el-tab-pane name="home">
+                            <span slot="label"><i class="el-icon-house"></i> {{homeTabTitle}} <el-button @click="handleRefreshTab('home')" type="text" size="mini" icon="el-icon-refresh"></el-button></span>
+                            <iframe id="home" name="tab-iframe" src="view/home.html" width="100%" frameborder="0"
+                                    scrolling="auto" onload="iframeAutoSize(this)"></iframe>
+                        </el-tab-pane>
+                        <el-tab-pane
+                                v-for="(item, index) in editableTabs"
+                                :key="item.id"
+                                :name="item.id"
+                                closable
+                        >
+                            <span slot="label"><i v-if="item.icon" :class="item.icon"></i> {{item.title}} <el-button @click="handleRefreshTab(item.id)" type="text" size="mini" icon="el-icon-refresh"></el-button></span>
+                            <iframe :id="item.id" name="tab-iframe" :src="item.url" width="100%" frameborder="0"
+                                    scrolling="auto" onload="iframeAutoSize(this)"></iframe>
+                        </el-tab-pane>
+                    </el-tabs>
+                </el-main>
+                <el-footer height="60">
+                    <el-link href="https://github.com/wpyuan" :underline="false">
+                        <el-avatar :size="60" src="../image/icon-blue.png"
+                                   click></el-avatar>
+                    </el-link>
+                    <span>{{footTitle}}</span>
+                </el-footer>
+            </el-container>
+        </el-container>
+    </el-container>
+</div>
+<script src="element-ui/js/vue.js"></script>
+<script src="element-ui/js/element.js"></script>
+<script src="js/jquery-3.5.1.min.js"></script>
+<script src="js/menu.js"></script>
+</body>
+<script type="text/javascript" language="javascript">
+    var menuList = [{
+        id: '1',
+        icon: 'el-icon-setting',
+        title: '配置管理',
+        children: [{
+            id: '1-1',
+            icon: 'el-icon-document',
+            title: '配置查询',
+            url: 'view/config/config_list.html',
+            children: null,
+        }, {
+            id: '1-2',
+            icon: 'el-icon-document-add',
+            title: '配置新增',
+            url: 'view/config/config_add.html',
+            children: null,
+        }],
+    }];
+    menuHelp.init(menuList);
+    menuHelp.loadMenu('menu');
+
+
+    new Vue({
+        el: '#app',
+        data() {
+            return {
+                systemTitle: 'Default Core System',
+                homeTabTitle: '首页',
+                footTitle: 'Powered by wpyuan',
+                isCollapse: false,
+                editableTabs: [],
+                currentTableId: 'home',
+            }
+        },
+        mounted() {
+        },
+        methods: {
+            handleCollapse() {
+                this.isCollapse = !this.isCollapse
+            },
+            addTab(menuId, tabId) {
+                const isExist = this.editableTabs.some(tab => tab.id === tabId)
+                if (isExist) {
+                    this.currentTableId = tabId
+                    this.handleRefreshTab(tabId)
+                    return
+                }
+                const menu = menuHelp.find(menuId);
+                this.editableTabs.push({
+                    title: menu.title,
+                    id: tabId,
+                    url: menu.url,
+                    icon: menu.icon,
+                });
+                this.currentTableId = tabId
+            },
+            removeTab(targetName) {
+                let tabs = this.editableTabs;
+                let activeName = this.currentTableId;
+                if (activeName === targetName) {
+                    tabs.forEach((tab, index) => {
+                        if (tab.id === targetName) {
+                            let nextTab = tabs[index + 1] || tabs[index - 1];
+                            if (nextTab) {
+                                activeName = nextTab.id;
+                            }
+                        }
+                    });
+                }
+
+                this.currentTableId = activeName;
+                this.editableTabs = tabs.filter(tab => tab.id !== targetName)
+            },
+            handleMenuClick(id, url) {
+                this.addTab(id, id)
+            },
+            handleRefreshTab(tabId) {
+                $('#'+tabId).attr('src', $('#'+tabId).attr('src'))
+            }
+        }
+    });
+
+    function iframeAutoSize(iframe) {
+        if (iframe) {
+            iframe.height = document.documentElement.clientHeight - 180;
+        }
+    }
+    window.onresize = function () {
+        var iframes = document.getElementsByName('tab-iframe');
+        for (i in iframes) {
+            iframeAutoSize(iframes[i]);
+        }
+    }
+
+</script>
+<style>
+    .container {
+        height: 100%;
+        display: flex;
+    }
+
+    .body-container {
+        flex: 1;
+    }
+
+    .el-header, .el-avatar {
+        background-color: #FFFFFF;
+        color: #409eff;
+    }
+
+    .el-divider {
+        margin: 0;
+    }
+
+    .el-main {
+        background-color: #FFFFFF;
+        color: #333;
+        text-align: center;
+        padding: 0;
+        border-top: 1px solid #eee;
+        border-left: 1px solid #eee;
+    }
+
+    .el-menu-vertical-demo:not(.el-menu--collapse) {
+        width: 200px;
+        min-height: 100px;
+    }
+
+    .el-aside {
+        border-top: 1px solid #eee;
+    }
+
+    .el-footer {
+        text-align: center;
+        /*border-top: 1px solid #eee;*/
+        border-left: 1px solid #eee;
+    }
+
+    .el-button--text {
+        color: #303133;
+    }
+</style>
+</html>

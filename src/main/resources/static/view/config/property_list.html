@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head runat="server">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="mobile-web-app-capable" content="yes"/>
+    <title>配置维护</title>
+    <link rel="icon" href="../../image/icon.png" type="image/x-icon"/>
+    <link rel="stylesheet" type="text/css" href="../../css/layout.css"/>
+    <link rel="stylesheet" href="../../element-ui/css/element.css">
+</head>
+<body>
+<div id="app" class="container" v-cloak>
+    <el-container>
+        <el-header height="30">
+            <el-page-header @back="goBack" :content="title">
+            </el-page-header>
+        </el-header>
+
+        <el-main>
+            <el-link href="javascript:(0)" class="title" icon="el-icon-edit" @click.native="configDialogVisible = true">配置详情</el-link>
+            <el-row :gutter="20">
+                <el-col :span="24">
+                    <span class="item-label">配置编码：</span>
+                    <span class="item-content">{{config.code}}</span>
+                </el-col>
+            </el-row>
+            <el-row :gutter="20">
+                <el-col :span="24">
+                    <span class="item-label">配置描述：</span>
+                    <span class="item-content">{{config.description}}</span>
+                </el-col>
+            </el-row>
+            <el-row :gutter="20">
+                <el-col :span="24">
+                    <span class="item-label">是否启用：</span>
+                    <el-tag v-if="config.isEnable" type="success">启用</el-tag>
+                    <el-tag v-else type="danger">禁用</el-tag>
+                </el-col>
+            </el-row>
+            <el-divider></el-divider>
+            <div class="title">属性列表</div>
+            <el-button size="small" type="primary" icon="el-icon-plus" @click="handleAdd">新增</el-button>
+
+            <el-table :data="propertyList">
+                <el-table-column type="expand">
+                    <template slot-scope="props">
+                        <el-form label-position="left" inline class="demo-table-expand">
+                            <el-form-item label="值">
+                                <span>{{ props.row.value }}</span>
+                            </el-form-item>
+                            <el-form-item label="描述">
+                                <span>{{ props.row.description }}</span>
+                            </el-form-item>
+                            <el-form-item label="排序号">
+                                <span>{{ props.row.orderSeq }}</span>
+                            </el-form-item>
+                            <el-form-item label="是否启用">
+                                <el-tag v-if="props.row.isEnable" type="success">启用</el-tag>
+                                <el-tag v-else type="danger">禁用</el-tag>
+                            </el-form-item>
+                            <el-form-item label="备注">
+                                <span>{{ props.row.remark }}</span>
+                            </el-form-item>
+                        </el-form>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="value" label="值">
+                </el-table-column>
+                <el-table-column prop="description" label="描述">
+                </el-table-column>
+                <el-table-column prop="orderSeq" label="排序号" width="80">
+                </el-table-column>
+                <el-table-column prop="isEnable" label="是否启用" width="80">
+                    <template slot-scope="scope">
+                        <el-tag v-if="scope.row.isEnable" type="success">启用</el-tag>
+                        <el-tag v-else type="danger">禁用</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column
+                        fixed="right"
+                        label="操作"
+                        width="100">
+                    <template slot-scope="scope">
+                        <el-button @click="handleEdit(scope.row)" type="text" size="small">编辑</el-button>
+                        <el-button @click="handleDel(scope.row, scope.$index)" type="text" size="small">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+
+            <el-dialog title="编辑配置" :visible.sync="configDialogVisible">
+                <el-form :model="config">
+                    <el-form-item label="配置编码" :label-width="formLabelWidth">
+                        <el-input v-model="config.code" autocomplete="off"></el-input>
+                    </el-form-item>
+                    <el-form-item label="配置描述" :label-width="formLabelWidth">
+                        <el-input v-model="config.description" autocomplete="off"></el-input>
+                    </el-form-item>
+                    <el-form-item label="是否启用" :label-width="formLabelWidth">
+                        <el-switch v-model="config.isEnable"></el-switch>
+                    </el-form-item>
+                </el-form>
+                <div slot="footer" class="dialog-footer">
+                    <el-button @click="configDialogVisible = false">取 消</el-button>
+                    <el-button type="primary" @click="handleSaveForm">确 定</el-button>
+                </div>
+            </el-dialog>
+
+            <el-drawer
+                    title="编辑属性值"
+                    :before-close="handleClose"
+                    :visible.sync="propertyDialogVisible"
+                    direction="rtl"
+                    custom-class="demo-drawer"
+                    size="50%"
+                    v-loading="loading"
+            >
+                <div class="demo-drawer__content">
+                    <el-form :model="editingProperty" :rules="rules" ref="editingProperty">
+                        <el-form-item label="值" :label-width="formLabelWidth" prop="value">
+                            <el-input v-model="editingProperty.value" autocomplete="off"></el-input>
+                        </el-form-item>
+                        <el-form-item label="描述" :label-width="formLabelWidth" prop="description">
+                            <el-input v-model="editingProperty.description" autocomplete="off"></el-input>
+                        </el-form-item>
+                        <el-form-item label="排序号" :label-width="formLabelWidth" prop="orderSeq">
+                            <el-input-number v-model="editingProperty.orderSeq" :min="1"></el-input-number>
+                        </el-form-item>
+                        <el-form-item label="是否启用" :label-width="formLabelWidth" prop="isEnable">
+                            <el-switch v-model="editingProperty.isEnable"></el-switch>
+                        </el-form-item>
+                        <el-form-item label="备注" :label-width="formLabelWidth" prop="remark">
+                            <el-input
+                                    type="textarea"
+                                    :autosize="{ minRows: 2, maxRows: 4}"
+                                    placeholder="请输入内容"
+                                    v-model="editingProperty.remark"
+                                    show-word-limit
+                                    maxlength="1000">
+                            </el-input>
+                        </el-form-item>
+                    </el-form>
+                    <div class="demo-drawer__footer">
+                        <el-button @click="cancelForm">取 消</el-button>
+                        <el-button type="primary" @click="handlerSaveProperty" :loading="loading">{{ loading ? '提交中 ...' : '确 定' }}</el-button>
+                    </div>
+                </div>
+            </el-drawer>
+        </el-main>
+    </el-container>
+</div>
+<script src="../../element-ui/js/vue.js"></script>
+<script src="../../element-ui/js/element.js"></script>
+<script src="../../js/jquery-3.5.1.min.js"></script>
+<script src="../../js/axios.js"></script>
+
+</body>
+<script type="text/javascript" language="javascript">
+    new Vue({
+        el: '#app',
+        data() {
+            return {
+                title: '详情',
+                propertyList: [],
+                config: {},
+                configDialogVisible: false,
+                propertyDialogVisible: false,
+                loading: false,
+                formLabelWidth: '80px',
+                editingProperty: {},
+                rules: {
+                    value: [
+                        { required: true, message: '请输入值', trigger: 'blur' },
+                    ],
+                    description: [
+                        { required: true, message: '请输入描述', trigger: 'blur' }
+                    ],
+                    orderSeq: [
+                        { required: true, message: '请输入排序号', trigger: 'blur' }
+                    ],
+                    isEnable: [
+                        { required: true, message: '请选择是否启用', trigger: 'blur' }
+                    ],
+                }
+            }
+        },
+        mounted() {
+            this.initData()
+        },
+        methods: {
+            initData() {
+                let that = this;
+                axios.get(`/config/detail?id=${this.queryString('configId')}`)
+                    .then(function (res) {
+                        that.config = res.data
+                        that.title = that.config.code
+                    }).catch(function (error) {
+                        that.$notify.error({
+                            title: '错误',
+                            message: '网络错误，请稍后再试',
+                            position: 'bottom-right'
+                        })
+                    });
+                this.loadProperties();
+            },
+            loadProperties() {
+                let that = this;
+                axios.get(`/property/list?configId=${this.queryString('configId')}`)
+                    .then(function (res) {
+                        that.propertyList = res.data;
+                    }).catch(function (error) {
+                    that.$notify.error({
+                        title: '错误',
+                        message: '网络错误，请稍后再试',
+                        position: 'bottom-right'
+                    });
+                });
+            },
+            handleEdit(row) {
+                this.propertyDialogVisible = true
+                this.editingProperty = row
+            },
+            handleDel(row, index) {
+                let that = this
+                axios.delete(`/property/remove`, {
+                    params: row
+                }).then(function (res) {
+                    that.propertyList.splice(index, 1)
+                }).catch(function (error) {
+                    that.$notify.error({
+                        title: '错误',
+                        message: '网络错误，请稍后再试',
+                        position: 'bottom-right'
+                    });
+                });
+            },
+            queryString(name) {
+                var result = location.search.match(new RegExp("[\?\&]" + name + "=([^\&]+)", "i"))
+                if (result == null || result.length < 1) {
+                    return ""
+                }
+                return result[1]
+            },
+            goBack() {
+                window.location.href = `config_list.html`
+            },
+            handleSaveForm() {
+                let that = this
+                axios.put('/config/update', this.config).then(function (res) {
+                    that.config = res.data
+                    that.configDialogVisible = false
+                }).catch(function (error) {
+                    that.$notify.error({
+                        title: '错误',
+                        message: '网络错误，请稍后再试',
+                        position: 'bottom-right'
+                    });
+                });
+            },
+            handleClose(done) {
+                if (this.loading) {
+                    this.$message({
+                        showClose: true,
+                        message: '正在提交中，请等待操作结束',
+                        type: 'warning'
+                    })
+                    return
+                }
+                done()
+            },
+            cancelForm() {
+                if (this.loading) {
+                    this.$message({
+                        showClose: true,
+                        message: '正在提交中，请等待操作结束',
+                        type: 'warning'
+                    });
+                    return;
+                }
+                this.loading = false
+                this.propertyDialogVisible = false
+            },
+            handlerSaveProperty() {
+                let that = this
+                this.loading = true
+                this.$refs['editingProperty'].validate((valid) => {
+                    if (!valid) {
+                        that.loading = false
+                        return false
+                    }
+                    if (this.editingProperty.id) {
+                        axios.put('/property/update', this.editingProperty).then(function (res) {
+                            that.editingProperty = res.data
+                            that.loading = false
+                            that.propertyDialogVisible = false
+                        }).catch(function (error) {
+                            that.loading = false
+                            that.$notify.error({
+                                title: '错误',
+                                message: '网络错误，请稍后再试',
+                                position: 'bottom-right'
+                            });
+                        });
+                    } else {
+                        axios.post('/property/create', this.editingProperty).then(function (res) {
+                            that.editingProperty = res.data
+                            that.loading = false
+                            that.propertyDialogVisible = false
+                            that.loadProperties();
+                        }).catch(function (error) {
+                            that.loading = false
+                            that.$notify.error({
+                                title: '错误',
+                                message: '网络错误，请稍后再试',
+                                position: 'bottom-right'
+                            });
+                        });
+                    }
+                });
+            },
+            handleAdd() {
+                this.propertyDialogVisible = true
+                this.editingProperty = {
+                    configId: this.config.id,
+                    orderSeq: 10,
+                    isEnable: true,
+                }
+            },
+        }
+    });
+</script>
+<style>
+    .container, .el-container {
+        height: 100%;
+    }
+    .el-main {
+        font-size: medium;
+    }
+
+    .el-row {
+        margin-bottom: 20px;
+    }
+
+    .title {
+        font-size: large;
+        font-weight: bold;
+        color: rgba(0, 0, 0, 0.85);
+        margin-bottom: 20px;
+        line-height: 1.5;
+    }
+
+    .item-label {
+        color: rgba(0, 0, 0, 0.85);
+        font-weight: normal;
+        font-size: 14px;
+        line-height: 1.5;
+
+    }
+    .item-content {
+        color: rgba(0, 0, 0, 0.65);
+        font-size: 14px;
+        line-height: 1.5;
+    }
+    .demo-drawer__content form {
+        flex: 1;
+    }
+
+    .demo-drawer__content {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+    .demo-drawer__footer {
+        display: flex;
+    }
+    .el-drawer__body {
+        padding: 20px;
+    }
+    .demo-drawer__footer button {
+        flex: 1;
+    }
+    .demo-table-expand {
+        font-size: 0;
+    }
+    .demo-table-expand label {
+        width: 90px;
+        color: #99a9bf;
+    }
+    .demo-table-expand .el-form-item {
+        margin-right: 0;
+        margin-bottom: 0;
+        width: 50%;
+    }
+</style>
+</html>
