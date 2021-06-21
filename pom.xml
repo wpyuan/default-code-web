@@ -9,7 +9,7 @@
     </parent>
     <groupId>com.github.wpyuan</groupId>
     <artifactId>default-code-web</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
     <name>default-code-web</name>
     <description>default code web pages project for element ui</description>
     <properties>

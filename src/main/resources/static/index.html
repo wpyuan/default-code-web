@@ -11,6 +11,24 @@
     <link rel="icon" href="image/icon.png" type="image/x-icon"/>
     <link rel="stylesheet" type="text/css" href="css/layout.css"/>
     <link rel="stylesheet" href="element-ui/css/element.css">
+    <script src="js/menu.js"></script>
+    <script src="js/jquery-3.5.1.min.js"></script>
+    <script type="text/javascript" language="javascript">
+        function initMenu() {
+            let res = [];
+            $.ajax({
+                url: '/menu/list/view',
+                type: 'get',
+                async: false,
+                success: function (response) {
+                    res = response;
+                }
+            })
+            menuHelp.init(res);
+        }
+
+        initMenu();
+    </script>
 </head>
 <body>
 <div id="app" class="container" v-cloak>
@@ -59,31 +77,9 @@
 </div>
 <script src="element-ui/js/vue.js"></script>
 <script src="element-ui/js/element.js"></script>
-<script src="js/jquery-3.5.1.min.js"></script>
-<script src="js/menu.js"></script>
 </body>
 <script type="text/javascript" language="javascript">
-    var menuList = [{
-        id: '1',
-        icon: 'el-icon-setting',
-        title: '配置管理',
-        children: [{
-            id: '1-1',
-            icon: 'el-icon-document',
-            title: '配置查询',
-            url: 'view/config/config_list.html',
-            children: null,
-        }, {
-            id: '1-2',
-            icon: 'el-icon-document-add',
-            title: '配置新增',
-            url: 'view/config/config_add.html',
-            children: null,
-        }],
-    }];
-    menuHelp.init(menuList);
     menuHelp.loadMenu('menu');
-
 
     new Vue({
         el: '#app',
